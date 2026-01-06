@@ -46,7 +46,7 @@ export async function loader() {
     }
 
     const puzzleData = JSON.parse(data);
-    
+
     // Update cache
     cachedPuzzle = puzzleData;
     cachedDateKey = dateKey;
@@ -54,14 +54,11 @@ export async function loader() {
     return { crosswordData: puzzleData };
   } catch (error) {
     console.error(`Failed to load puzzle for ${dateKey}:`, error);
-    
+
     // Fallback to local data
     const localData = await import("../../data/default.json");
-    
-    // Update cache with local data
-    cachedPuzzle = localData.default;
-    cachedDateKey = dateKey;
-    
+
+    // Don't cache local data
     return { crosswordData: localData.default };
   }
 }
