@@ -131,6 +131,110 @@ export function Crossword({ data }: CrosswordProps) {
   const currentClue = getCurrentClue();
   const wordCells = getWordCells(currentClue, direction);
 
+  // Helper functions
+  const isInteractionDisabled = (isCorrect && !isTimerRunning) || isPaused;
+  const showPuzzleInterface = !(isCorrect && !showSuccessMessage);
+
+  const selectAndFocusCell = (row: number, col: number) => {
+    setSelectedCell({ row, col });
+    setTimeout(() => {
+      inputRefs.current[row]?.[col]?.focus();
+    }, 0);
+  };
+
+  const getCluesByDirection = (dir: "across" | "down") =>
+    Array.from(clueMap.values()).filter((c) => c.direction === dir);
+
+  const handleBackspace = (row: number, col: number) => {
+    const currentClue = getCurrentClue();
+    if (!currentClue) return;
+
+    // Check if we're at the start of the current word
+    const isAtWordStart =
+      (direction === "across" && col === currentClue.startCol) ||
+      (direction === "down" && row === currentClue.startRow);
+
+    if (isAtWordStart) {
+      // Go to the last letter of the previous word
+      const allClues = getCluesByDirection(direction);
+      const currentIndex = allClues.findIndex(
+        (c) => c.number === currentClue.number
+      );
+      const prevIndex =
+        (currentIndex - 1 + allClues.length) % allClues.length;
+      const prevClue = allClues[prevIndex];
+
+      // Go to last cell of previous word
+      const lastRow =
+        direction === "across"
+          ? prevClue.startRow
+          : prevClue.startRow + prevClue.length - 1;
+      const lastCol =
+        direction === "across"
+          ? prevClue.startCol + prevClue.length - 1
+          : prevClue.startCol;
+
+      selectAndFocusCell(lastRow, lastCol);
+    } else {
+      // Move to previous cell in current word
+      let prevRow = row;
+      let prevCol = col;
+
+      if (direction === "across") {
+        prevCol--;
+      } else {
+        prevRow--;
+      }
+
+      if (prevRow >= 0 && prevCol >= 0 && grid[prevRow][prevCol] !== ".") {
+        setSelectedCell({ row: prevRow, col: prevCol });
+        const newGrid = userGrid.map((r) => [...r]);
+        newGrid[prevRow][prevCol] = "";
+        setUserGrid(newGrid);
+        setTimeout(() => {
+          inputRefs.current[prevRow]?.[prevCol]?.focus();
+        }, 0);
+      }
+    }
+  };
+
+  const navigateToClue = (dir: "next" | "prev") => {
+    const currentClue = getCurrentClue();
+    if (!currentClue) return;
+
+    const allClues = getCluesByDirection(direction);
+    const currentIndex = allClues.findIndex(
+      (c) => c.number === currentClue.number
+    );
+
+    const increment = dir === "next" ? 1 : -1;
+    let attempts = 0;
+    let targetIndex =
+      (currentIndex + increment + allClues.length) % allClues.length;
+
+    // Find next/prev unfilled or partially filled clue
+    while (attempts < allClues.length) {
+      const targetClue = allClues[targetIndex];
+      const cells = getWordCells(targetClue, direction);
+      const firstEmptyCell = cells.find(
+        (cell) => !userGrid[cell.row][cell.col]
+      );
+
+      if (firstEmptyCell) {
+        selectAndFocusCell(firstEmptyCell.row, firstEmptyCell.col);
+        return;
+      }
+
+      targetIndex = (targetIndex + increment + allClues.length) % allClues.length;
+      attempts++;
+    }
+
+    // All clues are filled, just go to the next/prev one
+    const targetClue =
+      allClues[(currentIndex + increment + allClues.length) % allClues.length];
+    selectAndFocusCell(targetClue.startRow, targetClue.startCol);
+  };
+
   const togglePause = () => {
     if (!isPaused) {
       // About to pause - save the current elapsed time
@@ -148,8 +252,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleCellClick = (row: number, col: number) => {
-    if (grid[row][col] === "." || (isCorrect && !isTimerRunning) || isPaused)
-      return;
+    if (grid[row][col] === "." || isInteractionDisabled) return;
 
     if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
       setDirection((prev) => (prev === "across" ? "down" : "across"));
@@ -174,7 +277,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleInputChange = (row: number, col: number, value: string) => {
-    if ((isCorrect && !isTimerRunning) || isPaused) return;
+    if (isInteractionDisabled) return;
 
     const newValue = value.slice(-1).toUpperCase();
     const newGrid = userGrid.map((r) => [...r]);
@@ -199,7 +302,7 @@ export function Crossword({ data }: CrosswordProps) {
           }
 
           if (nextCol >= currentClue.startCol + currentClue.length) {
-            goToNextClue();
+            navigateToClue("next");
             return;
           }
         } else {
@@ -213,7 +316,7 @@ export function Crossword({ data }: CrosswordProps) {
           }
 
           if (nextRow >= currentClue.startRow + currentClue.length) {
-            goToNextClue();
+            navigateToClue("next");
             return;
           }
         }
@@ -223,17 +326,14 @@ export function Crossword({ data }: CrosswordProps) {
           nextCol < size.cols &&
           grid[nextRow][nextCol] !== "."
         ) {
-          setSelectedCell({ row: nextRow, col: nextCol });
-          setTimeout(() => {
-            inputRefs.current[nextRow]?.[nextCol]?.focus();
-          }, 0);
+          selectAndFocusCell(nextRow, nextCol);
         }
       }
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, row: number, col: number) => {
-    if ((isCorrect && !isTimerRunning) || isPaused) return;
+    if (isInteractionDisabled) return;
 
     if (e.key === " ") {
       e.preventDefault();
@@ -241,68 +341,13 @@ export function Crossword({ data }: CrosswordProps) {
     } else if (e.key === "Tab") {
       e.preventDefault();
       if (e.shiftKey) {
-        goToPrevClue();
+        navigateToClue("prev");
       } else {
-        goToNextClue();
+        navigateToClue("next");
       }
     } else if (e.key === "Backspace" && !userGrid[row][col]) {
       e.preventDefault();
-
-      const currentClue = getCurrentClue();
-      if (!currentClue) return;
-
-      // Check if we're at the start of the current word
-      const isAtWordStart =
-        (direction === "across" && col === currentClue.startCol) ||
-        (direction === "down" && row === currentClue.startRow);
-
-      if (isAtWordStart) {
-        // Go to the last letter of the previous word
-        const allClues = Array.from(clueMap.values()).filter(
-          (c) => c.direction === direction
-        );
-        const currentIndex = allClues.findIndex(
-          (c) => c.number === currentClue.number
-        );
-        const prevIndex =
-          (currentIndex - 1 + allClues.length) % allClues.length;
-        const prevClue = allClues[prevIndex];
-
-        // Go to last cell of previous word
-        const lastRow =
-          direction === "across"
-            ? prevClue.startRow
-            : prevClue.startRow + prevClue.length - 1;
-        const lastCol =
-          direction === "across"
-            ? prevClue.startCol + prevClue.length - 1
-            : prevClue.startCol;
-
-        setSelectedCell({ row: lastRow, col: lastCol });
-        setTimeout(() => {
-          inputRefs.current[lastRow]?.[lastCol]?.focus();
-        }, 0);
-      } else {
-        // Move to previous cell in current word
-        let prevRow = row;
-        let prevCol = col;
-
-        if (direction === "across") {
-          prevCol--;
-        } else {
-          prevRow--;
-        }
-
-        if (prevRow >= 0 && prevCol >= 0 && grid[prevRow][prevCol] !== ".") {
-          setSelectedCell({ row: prevRow, col: prevCol });
-          const newGrid = userGrid.map((r) => [...r]);
-          newGrid[prevRow][prevCol] = "";
-          setUserGrid(newGrid);
-          setTimeout(() => {
-            inputRefs.current[prevRow]?.[prevCol]?.focus();
-          }, 0);
-        }
-      }
+      handleBackspace(row, col);
     } else if (
       e.key === "ArrowLeft" ||
       e.key === "ArrowRight" ||
@@ -320,106 +365,12 @@ export function Crossword({ data }: CrosswordProps) {
 
       const nextCell = findNextCell(grid, row, col, deltaRow, deltaCol, size);
       if (nextCell) {
-        setSelectedCell(nextCell);
-        setTimeout(() => {
-          inputRefs.current[nextCell.row]?.[nextCell.col]?.focus();
-        }, 0);
+        selectAndFocusCell(nextCell.row, nextCell.col);
       }
     }
   };
 
-  const goToNextClue = () => {
-    const currentClue = getCurrentClue();
-    if (!currentClue) return;
 
-    const allClues = Array.from(clueMap.values()).filter(
-      (c) => c.direction === direction
-    );
-    const currentIndex = allClues.findIndex(
-      (c) => c.number === currentClue.number
-    );
-
-    // Find next unfilled or partially filled clue
-    let attempts = 0;
-    let nextIndex = (currentIndex + 1) % allClues.length;
-
-    while (attempts < allClues.length) {
-      const nextClue = allClues[nextIndex];
-
-      // Check if the word is completely filled
-      const cells = getWordCells(nextClue, direction);
-      const firstEmptyCell = cells.find(
-        (cell) => !userGrid[cell.row][cell.col]
-      );
-
-      if (firstEmptyCell) {
-        // Found a clue with at least one empty cell
-        setSelectedCell({ row: firstEmptyCell.row, col: firstEmptyCell.col });
-        setTimeout(() => {
-          inputRefs.current[firstEmptyCell.row]?.[firstEmptyCell.col]?.focus();
-        }, 0);
-        return;
-      }
-
-      // Try next clue
-      nextIndex = (nextIndex + 1) % allClues.length;
-      attempts++;
-    }
-
-    // All clues are filled, just go to the next one
-    const nextClue = allClues[(currentIndex + 1) % allClues.length];
-    setSelectedCell({ row: nextClue.startRow, col: nextClue.startCol });
-    setTimeout(() => {
-      inputRefs.current[nextClue.startRow]?.[nextClue.startCol]?.focus();
-    }, 0);
-  };
-
-  const goToPrevClue = () => {
-    const currentClue = getCurrentClue();
-    if (!currentClue) return;
-
-    const allClues = Array.from(clueMap.values()).filter(
-      (c) => c.direction === direction
-    );
-    const currentIndex = allClues.findIndex(
-      (c) => c.number === currentClue.number
-    );
-
-    // Find previous unfilled or partially filled clue
-    let attempts = 0;
-    let prevIndex = (currentIndex - 1 + allClues.length) % allClues.length;
-
-    while (attempts < allClues.length) {
-      const prevClue = allClues[prevIndex];
-
-      // Check if the word is completely filled
-      const cells = getWordCells(prevClue, direction);
-      const firstEmptyCell = cells.find(
-        (cell) => !userGrid[cell.row][cell.col]
-      );
-
-      if (firstEmptyCell) {
-        // Found a clue with at least one empty cell
-        setSelectedCell({ row: firstEmptyCell.row, col: firstEmptyCell.col });
-        setTimeout(() => {
-          inputRefs.current[firstEmptyCell.row]?.[firstEmptyCell.col]?.focus();
-        }, 0);
-        return;
-      }
-
-      // Try previous clue
-      prevIndex = (prevIndex - 1 + allClues.length) % allClues.length;
-      attempts++;
-    }
-
-    // All clues are filled, just go to the previous one
-    const prevClue =
-      allClues[(currentIndex - 1 + allClues.length) % allClues.length];
-    setSelectedCell({ row: prevClue.startRow, col: prevClue.startCol });
-    setTimeout(() => {
-      inputRefs.current[prevClue.startRow]?.[prevClue.startCol]?.focus();
-    }, 0);
-  };
 
   const toggleDirection = () => {
     setDirection((prev) => (prev === "across" ? "down" : "across"));
@@ -431,7 +382,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleKeyboardClick = (key: string) => {
-    if (!selectedCell || (isCorrect && !isTimerRunning) || isPaused) return;
+    if (!selectedCell || isInteractionDisabled) return;
 
     if (key === "BACK") {
       const { row, col } = selectedCell;
@@ -440,24 +391,7 @@ export function Crossword({ data }: CrosswordProps) {
         newGrid[row][col] = "";
         setUserGrid(newGrid);
       } else {
-        let prevRow = row;
-        let prevCol = col;
-
-        if (direction === "across") {
-          prevCol--;
-        } else {
-          prevRow--;
-        }
-
-        if (prevRow >= 0 && prevCol >= 0 && grid[prevRow][prevCol] !== ".") {
-          setSelectedCell({ row: prevRow, col: prevCol });
-          const newGrid = userGrid.map((r) => [...r]);
-          newGrid[prevRow][prevCol] = "";
-          setUserGrid(newGrid);
-          setTimeout(() => {
-            inputRefs.current[prevRow]?.[prevCol]?.focus();
-          }, 0);
-        }
+        handleBackspace(row, col);
       }
     } else {
       const { row, col } = selectedCell;
@@ -466,19 +400,12 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleClueClick = (clue: ClueInfo) => {
-    setSelectedCell({ row: clue.startRow, col: clue.startCol });
     setDirection(clue.direction);
-    setTimeout(() => {
-      inputRefs.current[clue.startRow]?.[clue.startCol]?.focus();
-    }, 0);
+    selectAndFocusCell(clue.startRow, clue.startCol);
   };
 
-  const acrossClues = Array.from(clueMap.values()).filter(
-    (c) => c.direction === "across"
-  );
-  const downClues = Array.from(clueMap.values()).filter(
-    (c) => c.direction === "down"
-  );
+  const acrossClues = getCluesByDirection("across");
+  const downClues = getCluesByDirection("down");
 
   return (
     <div className="crossword-container">
@@ -503,9 +430,9 @@ export function Crossword({ data }: CrosswordProps) {
       )}
 
       <div
-        className={`crossword-main ${isCorrect && !showSuccessMessage ? "grid-centered" : ""}`}
+        className={`crossword-main ${!showPuzzleInterface ? "grid-centered" : ""}`}
       >
-        {!(isCorrect && !showSuccessMessage) && (
+        {showPuzzleInterface && (
           <div className="clue-lists desktop-only">
             <ClueList
               title="Across"
@@ -528,8 +455,8 @@ export function Crossword({ data }: CrosswordProps) {
           grid={grid}
           userGrid={userGrid}
           numberGrid={numberGrid}
-          selectedCell={isCorrect && !showSuccessMessage ? null : selectedCell}
-          wordCells={isCorrect && !showSuccessMessage ? [] : wordCells}
+          selectedCell={showPuzzleInterface ? selectedCell : null}
+          wordCells={showPuzzleInterface ? wordCells : []}
           inputRefs={inputRefs}
           isCorrect={isCorrect}
           isTimerRunning={isTimerRunning}
@@ -538,18 +465,18 @@ export function Crossword({ data }: CrosswordProps) {
           onKeyDown={handleKeyDown}
         />
 
-        {!(isCorrect && !showSuccessMessage) && (
+        {showPuzzleInterface && (
           <ClueLine
             currentClue={currentClue}
             direction={direction}
             className="mobile-clue-line"
             onToggleDirection={toggleDirection}
-            onPrevClue={goToPrevClue}
-            onNextClue={goToNextClue}
+            onPrevClue={() => navigateToClue("prev")}
+            onNextClue={() => navigateToClue("next")}
           />
         )}
 
-        {!(isCorrect && !showSuccessMessage) && (
+        {showPuzzleInterface && (
           <MobileKeyboard
             onKeyClick={handleKeyboardClick}
             disabled={isCorrect && !isTimerRunning}
@@ -557,14 +484,14 @@ export function Crossword({ data }: CrosswordProps) {
         )}
       </div>
 
-      {!(isCorrect && !showSuccessMessage) && (
+      {showPuzzleInterface && (
         <ClueLine
           currentClue={currentClue}
           direction={direction}
           className="desktop-clue-line"
           onToggleDirection={toggleDirection}
-          onPrevClue={goToPrevClue}
-          onNextClue={goToNextClue}
+          onPrevClue={() => navigateToClue("prev")}
+          onNextClue={() => navigateToClue("next")}
         />
       )}
 
