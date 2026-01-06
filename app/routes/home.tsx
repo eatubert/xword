@@ -1,4 +1,8 @@
-import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  ListObjectsV2Command,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Resource } from "sst";
 import { Crossword } from "../components/Crossword";
 import "../styles/crossword.css";
@@ -7,7 +11,7 @@ import type { Route } from "./+types/home";
 
 // Cache for puzzle data
 let cachedPuzzle: CrosswordData | null = null;
-let cachedDateKey: string | null = null;
+let cachedPuzzleKey: string | null = null;
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -17,28 +21,44 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export async function loader() {
-  // Get current date in yyyy-mm-dd format (UTC)
-  const today = new Date();
-  const year = today.getUTCFullYear();
-  const month = String(today.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(today.getUTCDate()).padStart(2, "0");
-  const dateKey = `${year}-${month}-${day}.json`;
-
-  // Return cached puzzle if date hasn't changed
-  if (cachedPuzzle && cachedDateKey === dateKey) {
-    return { crosswordData: cachedPuzzle };
-  }
-
   const s3 = new S3Client({});
 
-  // Try to load today's puzzle
+  // List all puzzle files and get the most recent one
   try {
-    const command = new GetObjectCommand({
+    const listCommand = new ListObjectsV2Command({
       Bucket: Resource.XWordBucket.name,
-      Key: dateKey,
     });
 
-    const response = await s3.send(command);
+    const listResponse = await s3.send(listCommand);
+
+    if (!listResponse.Contents || listResponse.Contents.length === 0) {
+      throw new Error("No puzzles found in S3 bucket");
+    }
+
+    // Filter for files matching yyyy-mm-dd.json pattern and sort in reverse order
+    const datePattern = /^\d{4}-\d{2}-\d{2}\.json$/;
+    const sortedFiles = listResponse.Contents.filter(
+      (item) => item.Key && datePattern.test(item.Key)
+    ).sort((a, b) => (b.Key || "").localeCompare(a.Key || ""));
+
+    if (sortedFiles.length === 0) {
+      throw new Error("No JSON puzzle files found");
+    }
+
+    const latestKey = sortedFiles[0].Key!;
+
+    // Return cached puzzle if key hasn't changed
+    if (cachedPuzzle && cachedPuzzleKey === latestKey) {
+      return { crosswordData: cachedPuzzle };
+    }
+
+    // Fetch the latest puzzle
+    const getCommand = new GetObjectCommand({
+      Bucket: Resource.XWordBucket.name,
+      Key: latestKey,
+    });
+
+    const response = await s3.send(getCommand);
     const data = await response.Body?.transformToString();
 
     if (!data) {
@@ -49,11 +69,11 @@ export async function loader() {
 
     // Update cache
     cachedPuzzle = puzzleData;
-    cachedDateKey = dateKey;
+    cachedPuzzleKey = latestKey;
 
     return { crosswordData: puzzleData };
   } catch (error) {
-    console.error(`Failed to load puzzle for ${dateKey}:`, error);
+    console.error("Failed to load puzzle from S3:", error);
 
     // Fallback to local data
     const localData = await import("../../data/default.json");
