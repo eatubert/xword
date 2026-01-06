@@ -44,6 +44,12 @@
   flex-shrink: 2;
 }
 
+@media (prefers-color-scheme: dark) {
+  .author {
+    color: #aaa;
+  }
+}
+
 .timer-container {
   display: flex;
   align-items: center;
@@ -76,6 +82,12 @@
   color: #333;
   width: 3.5rem;
   text-align: right;
+}
+
+@media (prefers-color-scheme: dark) {
+  .timer {
+    color: #ddd;
+  }
 }
 
 .pause-button {
@@ -113,6 +125,14 @@
   border-radius: 12px;
   text-align: center;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pause-content {
+    background: #1f2937;
+    color: #f3f4f6;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  }
 }
 
 .pause-content h2 {
@@ -199,6 +219,13 @@
     border-radius: 4px;
   }
 
+  @media (prefers-color-scheme: dark) {
+    .clue-column h2 {
+      background: #374151;
+      color: #f3f4f6;
+    }
+  }
+
   .clue-list {
     flex: 1;
     overflow-y: auto;
@@ -206,6 +233,13 @@
     padding: 0.5rem;
     border: 1px solid #ddd;
     border-radius: 4px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .clue-list {
+      border-color: #4b5563;
+      background: #1f2937;
+    }
   }
 
   .clue-item {
@@ -227,6 +261,17 @@
   .clue-item.active {
     background: #e3f2fd;
     font-weight: 600;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .clue-item:hover {
+      background: #374151;
+    }
+
+    .clue-item.active {
+      background: #1e3a5f;
+      color: #bfdbfe;
+    }
   }
 
   .clue-number {
@@ -259,6 +304,13 @@
   aspect-ratio: 1;
 }
 
+@media (prefers-color-scheme: dark) {
+  .crossword-grid {
+    background: #4b5563;
+    border-color: #4b5563;
+  }
+}
+
 .crossword-cell {
   background: #fff;
   position: relative;
@@ -288,6 +340,12 @@
   background: #000;
 }
 
+@media (prefers-color-scheme: dark) {
+  .crossword-cell.blocked {
+    background: #111827;
+  }
+}
+
 .crossword-cell.selected {
   background: #ffeb3b;
 }
@@ -305,6 +363,13 @@
   line-height: 1;
   pointer-events: none;
   z-index: 1;
+  color: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cell-number {
+    color: #000;
+  }
 }
 
 .cell-input {
@@ -319,10 +384,21 @@
   outline: none;
   caret-color: transparent;
   padding: 0;
+  color: #000;
 }
 
 .cell-input:disabled {
   color: #000;
+}
+
+@media (prefers-color-scheme: dark) {
+  .cell-input {
+    color: #000;
+  }
+
+  .cell-input:disabled {
+    color: #000;
+  }
 }
 
 /* Clue line */
@@ -336,6 +412,14 @@
   border-radius: 8px;
   margin-top: auto;
   cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  .clue-line {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
 }
 
 .clue-nav-btn {
@@ -352,6 +436,12 @@
   justify-content: center;
   transition: opacity 0.2s;
   color: #666;
+}
+
+@media (prefers-color-scheme: dark) {
+  .clue-nav-btn {
+    color: #9ca3af;
+  }
 }
 
 .clue-nav-btn:hover {
@@ -386,6 +476,12 @@
 .no-clue {
   color: #999;
   font-style: italic;
+}
+
+@media (prefers-color-scheme: dark) {
+  .no-clue {
+    color: #6b7280;
+  }
 }
 
 /* Status message */
@@ -467,6 +563,20 @@
   background: #555;
 }
 
+@media (prefers-color-scheme: dark) {
+  .clue-list::-webkit-scrollbar-track {
+    background: #374151;
+  }
+
+  .clue-list::-webkit-scrollbar-thumb {
+    background: #6b7280;
+  }
+
+  .clue-list::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+}
+
 /* Mobile and desktop specific clue line and keyboard */
 .mobile-clue-line {
   display: none;
@@ -508,6 +618,12 @@
     margin-top: 1rem;
   }
 
+  @media (prefers-color-scheme: dark) {
+    .mobile-keyboard {
+      background: #1f2937;
+    }
+  }
+
   .keyboard-row {
     display: flex;
     justify-content: center;
@@ -533,6 +649,18 @@
 
   .keyboard-key:active {
     background: #e0e0e0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .keyboard-key {
+      background: #374151;
+      border-color: #4b5563;
+      color: #f3f4f6;
+    }
+
+    .keyboard-key:active {
+      background: #4b5563;
+    }
   }
 
   .keyboard-key:disabled {

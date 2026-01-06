@@ -14,11 +14,18 @@ export default $config({
       throw new Error("DOMAIN environment variable is required");
     }
 
+    $transform(sst.aws.Function, (args, opts) => {
+      args.runtime = "nodejs22.x";
+    });
+
     const bucket = new sst.aws.Bucket("XWordBucket");
 
     new sst.aws.React("XWordApp", {
       domain: process.env.DOMAIN,
       link: [bucket],
+      server: {
+        runtime: "nodejs22.x",
+      },
     });
 
     return {
