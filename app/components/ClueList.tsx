@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { ClueInfo } from "../types/crossword";
 
 interface ClueListProps {
@@ -16,26 +17,36 @@ export function ClueList({
   onClueClick,
 }: ClueListProps) {
   const direction = title.toLowerCase() as "across" | "down";
+  const activeClueRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (activeClueRef.current && currentDirection === direction) {
+      activeClueRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
+  }, [currentClueNumber, currentDirection, direction]);
 
   return (
     <div className="clue-column">
       <h2>{title}</h2>
       <div className="clue-list">
-        {clues.map((clue) => (
-          <div
-            key={`${clue.number}-${direction}`}
-            className={`clue-item ${
-              currentClueNumber === clue.number &&
-              currentDirection === direction
-                ? "active"
-                : ""
-            }`}
-            onClick={() => onClueClick(clue)}
-          >
-            <span className="clue-number">{clue.number}.</span>
-            <span className="clue-text">{clue.text}</span>
-          </div>
-        ))}
+        {clues.map((clue) => {
+          const isActive =
+            currentClueNumber === clue.number && currentDirection === direction;
+          return (
+            <div
+              key={`${clue.number}-${direction}`}
+              ref={isActive ? activeClueRef : null}
+              className={`clue-item ${isActive ? "active" : ""}`}
+              onClick={() => onClueClick(clue)}
+            >
+              <span className="clue-number">{clue.number}.</span>
+              <span className="clue-text">{clue.text}</span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
