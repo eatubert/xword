@@ -13,6 +13,12 @@
   height: 100vh;
 }
 
+@media (max-width: 768px) {
+  .crossword-container {
+    padding: 0.5rem;
+  }
+}
+
 .crossword-header {
   margin-bottom: 1rem;
   display: flex;
@@ -22,6 +28,14 @@
   min-height: 3rem;
   padding: 0 1rem;
   gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .crossword-header {
+    margin-bottom: 0.5rem;
+    padding: 0 0.5rem;
+    min-height: 2.5rem;
+  }
 }
 
 .title-container {
@@ -191,7 +205,7 @@
     justify-content: center;
     align-items: flex-start;
     overflow: auto;
-    padding: 1rem 0;
+    padding: 0.5rem 0;
   }
 }
 
@@ -436,6 +450,12 @@
   cursor: pointer;
 }
 
+@media (max-width: 768px) {
+  .clue-line {
+    padding: 0.5rem;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   .clue-line {
     background: #1f2937;
@@ -615,7 +635,7 @@
 @media (max-width: 768px) {
   .mobile-clue-line {
     display: flex;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
   }
 
   .mobile-clue-line .clue-number-display {
@@ -634,10 +654,10 @@
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    padding: 1rem;
+    padding: 0.5rem;
     background: #f5f5f5;
     border-radius: 8px;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
   }
 
   @media (prefers-color-scheme: dark) {
