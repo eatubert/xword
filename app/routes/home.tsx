@@ -67,6 +67,9 @@ export async function loader() {
 
     const puzzleData = JSON.parse(data);
 
+    // Add fileName field
+    puzzleData.fileName = latestKey;
+
     // Update cache
     cachedPuzzle = puzzleData;
     cachedPuzzleKey = latestKey;
@@ -77,9 +80,13 @@ export async function loader() {
 
     // Fallback to local data
     const localData = await import("../../data/default.json");
+    const puzzleData = localData.default as CrosswordData;
+
+    // Add fileName field
+    puzzleData.fileName = "sample";
 
     // Don't cache local data
-    return { crosswordData: localData.default };
+    return { crosswordData: puzzleData };
   }
 }
 

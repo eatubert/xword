@@ -1,6 +1,7 @@
 export interface CrosswordData {
   author: string;
   title: string;
+  fileName?: string;
   size: {
     rows: number;
     cols: number;

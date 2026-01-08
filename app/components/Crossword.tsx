@@ -26,11 +26,25 @@ export function Crossword({ data }: CrosswordProps) {
     [data.grid, size.rows, size.cols]
   );
 
-  const [userGrid, setUserGrid] = useState<string[][]>(() =>
-    Array(size.rows)
+  const [userGrid, setUserGrid] = useState<string[][]>(() => {
+    // Try to load saved state from localStorage
+    if (typeof window !== "undefined" && data.fileName) {
+      const savedState = localStorage.getItem(`crossword_${data.fileName}`);
+      if (savedState) {
+        try {
+          const parsed = JSON.parse(savedState);
+          if (Array.isArray(parsed) && parsed.length === size.rows) {
+            return parsed;
+          }
+        } catch (e) {
+          console.error("Failed to parse saved crossword state", e);
+        }
+      }
+    }
+    return Array(size.rows)
       .fill(null)
-      .map(() => Array(size.cols).fill(""))
-  );
+      .map(() => Array(size.cols).fill(""));
+  });
   const [selectedCell, setSelectedCell] = useState<{
     row: number;
     col: number;
@@ -42,11 +56,46 @@ export function Crossword({ data }: CrosswordProps) {
   const [isCorrect, setIsCorrect] = useState(false);
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(() => {
+    if (typeof window !== "undefined" && data.fileName) {
+      const savedTimer = localStorage.getItem(
+        `crossword_timer_${data.fileName}`
+      );
+      if (savedTimer) {
+        try {
+          return JSON.parse(savedTimer);
+        } catch (e) {
+          console.error("Failed to parse saved timer state", e);
+        }
+      }
+    }
+    return 0;
+  });
   const [isTimerRunning, setIsTimerRunning] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
-  const pausedTimeRef = useRef(0); // Accumulated time spent solving
-  const lastResumeTimeRef = useRef(Date.now()); // Last time the timer was resumed
+
+  // Initialize pausedTimeRef with saved timer value
+  const pausedTimeRef = useRef(0);
+  const lastResumeTimeRef = useRef(Date.now());
+
+  // Load saved timer into pausedTimeRef on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && data.fileName) {
+      const savedTimer = localStorage.getItem(
+        `crossword_timer_${data.fileName}`
+      );
+      if (savedTimer) {
+        try {
+          const parsed = JSON.parse(savedTimer);
+          pausedTimeRef.current = parsed;
+          setElapsedTime(parsed);
+        } catch (e) {
+          console.error("Failed to parse saved timer state", e);
+        }
+      }
+    }
+  }, [data.fileName]);
+
   const successOverlayRef = useRef<HTMLDivElement>(null);
   const errorOverlayRef = useRef<HTMLDivElement>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[][]>(
@@ -54,6 +103,46 @@ export function Crossword({ data }: CrosswordProps) {
       .fill(null)
       .map(() => Array(size.cols).fill(null))
   );
+
+  // Clean up old localStorage entries on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && data.fileName) {
+      const currentKey = `crossword_${data.fileName}`;
+      const currentTimerKey = `crossword_timer_${data.fileName}`;
+      // Iterate through all localStorage keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (
+          key &&
+          key.startsWith("crossword_") &&
+          key !== currentKey &&
+          key !== currentTimerKey
+        ) {
+          localStorage.removeItem(key);
+        }
+      }
+    }
+  }, [data.fileName]);
+
+  // Save state to localStorage whenever userGrid changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && data.fileName) {
+      localStorage.setItem(
+        `crossword_${data.fileName}`,
+        JSON.stringify(userGrid)
+      );
+    }
+  }, [userGrid, data.fileName]);
+
+  // Save timer to localStorage whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && data.fileName) {
+      localStorage.setItem(
+        `crossword_timer_${data.fileName}`,
+        JSON.stringify(elapsedTime)
+      );
+    }
+  }, [elapsedTime, data.fileName]);
 
   // Initialize clue map and number grid
   useEffect(() => {
@@ -92,6 +181,36 @@ export function Crossword({ data }: CrosswordProps) {
 
     return () => clearInterval(interval);
   }, [isTimerRunning, isPaused]);
+
+  // Pause timer when browser window becomes inactive
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Window is now hidden - save current elapsed time
+        if (!isPaused && isTimerRunning) {
+          const currentTime = Date.now();
+          const sessionTime = Math.floor(
+            (currentTime - lastResumeTimeRef.current) / 1000
+          );
+          pausedTimeRef.current += sessionTime;
+          setElapsedTime(pausedTimeRef.current);
+          setIsPaused(true);
+        }
+      } else {
+        // Window is now visible - resume timer
+        if (isPaused && isTimerRunning) {
+          lastResumeTimeRef.current = Date.now();
+          setIsPaused(false);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isPaused, isTimerRunning]);
 
   // Check puzzle completion
   useEffect(() => {
@@ -160,8 +279,7 @@ export function Crossword({ data }: CrosswordProps) {
       const currentIndex = allClues.findIndex(
         (c) => c.number === currentClue.number
       );
-      const prevIndex =
-        (currentIndex - 1 + allClues.length) % allClues.length;
+      const prevIndex = (currentIndex - 1 + allClues.length) % allClues.length;
       const prevClue = allClues[prevIndex];
 
       // Go to last cell of previous word
@@ -225,7 +343,8 @@ export function Crossword({ data }: CrosswordProps) {
         return;
       }
 
-      targetIndex = (targetIndex + increment + allClues.length) % allClues.length;
+      targetIndex =
+        (targetIndex + increment + allClues.length) % allClues.length;
       attempts++;
     }
 
@@ -369,8 +488,6 @@ export function Crossword({ data }: CrosswordProps) {
       }
     }
   };
-
-
 
   const toggleDirection = () => {
     setDirection((prev) => (prev === "across" ? "down" : "across"));
