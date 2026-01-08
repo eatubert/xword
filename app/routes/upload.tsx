@@ -3,6 +3,7 @@ import { useState } from "react";
 import { redirect } from "react-router";
 import { Resource } from "sst";
 import "../styles/upload.css";
+import { parsePuzFile } from "../utils/puzParser";
 import type { Route } from "./+types/upload";
 
 export function meta({}: Route.MetaArgs) {
@@ -27,21 +28,41 @@ export async function action({ request }: Route.ActionArgs) {
     return { error: "Date must be in format YYYY-MM-DD" };
   }
 
-  // Validate file is JSON
-  if (!file.name.endsWith(".json") && file.type !== "application/json") {
-    return { error: "File must be a JSON file" };
+  // Validate file is JSON or PUZ
+  const isJson =
+    file.name.endsWith(".json") || file.type === "application/json";
+  const isPuz = file.name.endsWith(".puz");
+
+  if (!isJson && !isPuz) {
+    return { error: "File must be a JSON or PUZ file" };
   }
 
   try {
-    // Read file content
-    const fileContent = await file.text();
-
-    // Validate JSON structure
+    // Read and parse file content
     let puzzleData;
-    try {
-      puzzleData = JSON.parse(fileContent);
-    } catch (e) {
-      return { error: "Invalid JSON file" };
+    let fileContent: string;
+
+    if (isPuz) {
+      // Parse .puz file
+      try {
+        puzzleData = await parsePuzFile(file);
+        fileContent = JSON.stringify(puzzleData, null, 2);
+      } catch (e) {
+        return {
+          error:
+            e instanceof Error
+              ? `Failed to parse .puz file: ${e.message}`
+              : "Invalid .puz file",
+        };
+      }
+    } else {
+      // Parse JSON file
+      fileContent = await file.text();
+      try {
+        puzzleData = JSON.parse(fileContent);
+      } catch (e) {
+        return { error: "Invalid JSON file" };
+      }
     }
 
     // Validate puzzle structure - basic fields
@@ -224,12 +245,12 @@ export default function Upload({ actionData }: Route.ComponentProps) {
               type="file"
               id="file"
               name="file"
-              accept=".json,application/json"
+              accept=".json,.puz,application/json"
               onChange={(e) => setFile(e.target.files?.[0] || null)}
               required
               className="form-input"
             />
-            <small className="form-hint">Must be a JSON file</small>
+            <small className="form-hint">Must be a JSON or PUZ file</small>
             {file && (
               <div className="file-info">
                 Selected: {file.name} ({Math.round(file.size / 1024)} KB)
@@ -249,6 +270,18 @@ export default function Upload({ actionData }: Route.ComponentProps) {
 
         <div className="upload-help">
           <h2>Puzzle Format</h2>
+          <p>You can upload puzzles in two formats:</p>
+          <ul>
+            <li>
+              <strong>.puz files</strong> - (automatically converted to JSON
+              upon upload)
+            </li>
+            <li>
+              <strong>.json files</strong> - Custom JSON format (see below)
+            </li>
+          </ul>
+          &nbsp;
+          <h3>JSON Format</h3>
           <p>The JSON file should have the following structure:</p>
           <pre className="code-block">
             {`{
