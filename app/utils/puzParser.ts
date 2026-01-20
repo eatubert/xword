@@ -26,7 +26,7 @@ function isBlackCell(
   grid: string[],
   x: number,
   y: number,
-  width: number
+  width: number,
 ): boolean {
   const index = y * width + x;
   return grid[index] === ".";
@@ -40,7 +40,7 @@ function cellNeedsAcrossNumber(
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
 ): boolean {
   // Check that there is no blank to the left of us
   if (x === 0 || isBlackCell(grid, x - 1, y, width)) {
@@ -60,7 +60,7 @@ function cellNeedsDownNumber(
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
 ): boolean {
   // Check that there is no blank above us
   if (y === 0 || isBlackCell(grid, x, y - 1, width)) {
@@ -78,7 +78,7 @@ function cellNeedsDownNumber(
 function assignClueNumbers(
   grid: string[],
   width: number,
-  height: number
+  height: number,
 ): {
   acrossNumbers: number[];
   downNumbers: number[];
@@ -123,22 +123,14 @@ function assignClueNumbers(
  */
 function readNullTerminatedString(
   buffer: Uint8Array,
-  offset: number
+  offset: number,
 ): { value: string; nextOffset: number } {
   let end = offset;
   while (end < buffer.length && buffer[end] !== 0) {
     end++;
   }
 
-  // Use TextDecoder with windows-1252 encoding (as noted in the spec comments)
-  // Fallback to latin1 if windows-1252 is not available
-  let decoder: TextDecoder;
-  try {
-    decoder = new TextDecoder("windows-1252");
-  } catch {
-    decoder = new TextDecoder("iso-8859-1");
-  }
-
+  const decoder = new TextDecoder("utf-8");
   const value = decoder.decode(buffer.slice(offset, end));
   return { value, nextOffset: end + 1 }; // +1 to skip the null terminator
 }
@@ -185,10 +177,10 @@ function cleanHtmlFromClue(text: string): string {
 
   // Handle numeric entities (&#123; or &#xAB;)
   cleaned = cleaned.replace(/&#(\d+);/g, (_, num) =>
-    String.fromCharCode(parseInt(num, 10))
+    String.fromCharCode(parseInt(num, 10)),
   );
   cleaned = cleaned.replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) =>
-    String.fromCharCode(parseInt(hex, 16))
+    String.fromCharCode(parseInt(hex, 16)),
   );
 
   return cleaned;
@@ -220,7 +212,7 @@ export async function parsePuzFile(file: File): Promise<PuzzleData> {
   const solutionOffset = 0x34;
   const gridSize = width * height;
   const solution = Array.from(
-    buffer.slice(solutionOffset, solutionOffset + gridSize)
+    buffer.slice(solutionOffset, solutionOffset + gridSize),
   ).map((byte) => String.fromCharCode(byte));
 
   // Skip player state (same size as solution)
@@ -231,13 +223,13 @@ export async function parsePuzFile(file: File): Promise<PuzzleData> {
 
   const { value: title, nextOffset: afterTitle } = readNullTerminatedString(
     buffer,
-    offset
+    offset,
   );
   offset = afterTitle;
 
   const { value: author, nextOffset: afterAuthor } = readNullTerminatedString(
     buffer,
-    offset
+    offset,
   );
   offset = afterAuthor;
 
@@ -250,7 +242,7 @@ export async function parsePuzFile(file: File): Promise<PuzzleData> {
   for (let i = 0; i < numClues; i++) {
     const { value: clue, nextOffset } = readNullTerminatedString(
       buffer,
-      offset
+      offset,
     );
     // Clean HTML entities and tags from clues
     clueStrings.push(cleanHtmlFromClue(clue));
@@ -268,7 +260,7 @@ export async function parsePuzFile(file: File): Promise<PuzzleData> {
   const { acrossNumbers, downNumbers } = assignClueNumbers(
     solution,
     width,
-    height
+    height,
   );
 
   // Separate clues into across and down based on the assigned numbers
