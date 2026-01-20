@@ -251,8 +251,8 @@ export function Crossword({ data }: CrosswordProps) {
   const wordCells = getWordCells(currentClue, direction);
 
   // Helper functions
-  const isInteractionDisabled = (isCorrect && !isTimerRunning) || isPaused;
-  const showPuzzleInterface = !(isCorrect && !showSuccessMessage);
+  const isInputDisabled = (isCorrect && !isTimerRunning) || isPaused;
+  const showPuzzleInterface = true;
 
   const selectAndFocusCell = (row: number, col: number) => {
     setSelectedCell({ row, col });
@@ -371,7 +371,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleCellClick = (row: number, col: number) => {
-    if (grid[row][col] === "." || isInteractionDisabled) return;
+    if (grid[row][col] === "." || isPaused) return;
 
     if (selectedCell && selectedCell.row === row && selectedCell.col === col) {
       setDirection((prev) => (prev === "across" ? "down" : "across"));
@@ -395,7 +395,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleInputChange = (row: number, col: number, value: string) => {
-    if (isInteractionDisabled) return;
+    if (isInputDisabled) return;
 
     const newValue = value.slice(-1).toUpperCase();
     const newGrid = userGrid.map((r) => [...r]);
@@ -427,7 +427,7 @@ export function Crossword({ data }: CrosswordProps) {
             );
             if (currentIndex === allClues.length - 1) {
               // Last clue in this direction, switch to other direction
-              const newDirection = direction === "across" ? "down" : "across";
+              const newDirection = "down";
               setDirection(newDirection);
               const otherDirectionClues = getCluesByDirection(newDirection);
               if (otherDirectionClues.length > 0) {
@@ -465,7 +465,7 @@ export function Crossword({ data }: CrosswordProps) {
             );
             if (currentIndex === allClues.length - 1) {
               // Last clue in this direction, switch to other direction
-              const newDirection = direction === "across" ? "down" : "across";
+              const newDirection = "across";
               setDirection(newDirection);
               const otherDirectionClues = getCluesByDirection(newDirection);
               if (otherDirectionClues.length > 0) {
@@ -499,7 +499,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, row: number, col: number) => {
-    if (isInteractionDisabled) return;
+    if (isPaused) return;
 
     if (e.key === " ") {
       e.preventDefault();
@@ -546,7 +546,7 @@ export function Crossword({ data }: CrosswordProps) {
   };
 
   const handleKeyboardClick = (key: string) => {
-    if (!selectedCell || isInteractionDisabled) return;
+    if (!selectedCell || isInputDisabled) return;
 
     if (key === "BACK") {
       const { row, col } = selectedCell;
@@ -643,7 +643,7 @@ export function Crossword({ data }: CrosswordProps) {
         {showPuzzleInterface && (
           <MobileKeyboard
             onKeyClick={handleKeyboardClick}
-            disabled={isCorrect && !isTimerRunning}
+            disabled={isInputDisabled}
           />
         )}
       </div>
