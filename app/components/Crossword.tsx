@@ -23,7 +23,7 @@ export function Crossword({ data }: CrosswordProps) {
 
   const grid = useMemo(
     () => convertFlatGridTo2D(data.grid, size.rows, size.cols),
-    [data.grid, size.rows, size.cols]
+    [data.grid, size.rows, size.cols],
   );
 
   const [userGrid, setUserGrid] = useState<string[][]>(() => {
@@ -59,7 +59,7 @@ export function Crossword({ data }: CrosswordProps) {
   const [elapsedTime, setElapsedTime] = useState(() => {
     if (typeof window !== "undefined" && data.fileName) {
       const savedTimer = localStorage.getItem(
-        `crossword_timer_${data.fileName}`
+        `crossword_timer_${data.fileName}`,
       );
       if (savedTimer) {
         try {
@@ -82,7 +82,7 @@ export function Crossword({ data }: CrosswordProps) {
   useEffect(() => {
     if (typeof window !== "undefined" && data.fileName) {
       const savedTimer = localStorage.getItem(
-        `crossword_timer_${data.fileName}`
+        `crossword_timer_${data.fileName}`,
       );
       if (savedTimer) {
         try {
@@ -101,7 +101,7 @@ export function Crossword({ data }: CrosswordProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[][]>(
     Array(size.rows)
       .fill(null)
-      .map(() => Array(size.cols).fill(null))
+      .map(() => Array(size.cols).fill(null)),
   );
 
   // Clean up old localStorage entries on mount
@@ -129,7 +129,7 @@ export function Crossword({ data }: CrosswordProps) {
     if (typeof window !== "undefined" && data.fileName) {
       localStorage.setItem(
         `crossword_${data.fileName}`,
-        JSON.stringify(userGrid)
+        JSON.stringify(userGrid),
       );
     }
   }, [userGrid, data.fileName]);
@@ -139,7 +139,7 @@ export function Crossword({ data }: CrosswordProps) {
     if (typeof window !== "undefined" && data.fileName) {
       localStorage.setItem(
         `crossword_timer_${data.fileName}`,
-        JSON.stringify(elapsedTime)
+        JSON.stringify(elapsedTime),
       );
     }
   }, [elapsedTime, data.fileName]);
@@ -149,14 +149,14 @@ export function Crossword({ data }: CrosswordProps) {
     const { clueMap: map, numberGrid: numbers } = buildClueMapAndNumberGrid(
       grid,
       size,
-      clues
+      clues,
     );
     setNumberGrid(numbers);
     setClueMap(map);
 
     // Select first across word on initial load
     const acrossClues = Array.from(map.values()).filter(
-      (c) => c.direction === "across"
+      (c) => c.direction === "across",
     );
     if (acrossClues.length > 0) {
       const firstClue = acrossClues[0];
@@ -174,7 +174,7 @@ export function Crossword({ data }: CrosswordProps) {
     const interval = setInterval(() => {
       const currentTime = Date.now();
       const sessionTime = Math.floor(
-        (currentTime - lastResumeTimeRef.current) / 1000
+        (currentTime - lastResumeTimeRef.current) / 1000,
       );
       setElapsedTime(pausedTimeRef.current + sessionTime);
     }, 100); // Update more frequently for accuracy
@@ -190,7 +190,7 @@ export function Crossword({ data }: CrosswordProps) {
         if (!isPaused && isTimerRunning) {
           const currentTime = Date.now();
           const sessionTime = Math.floor(
-            (currentTime - lastResumeTimeRef.current) / 1000
+            (currentTime - lastResumeTimeRef.current) / 1000,
           );
           pausedTimeRef.current += sessionTime;
           setElapsedTime(pausedTimeRef.current);
@@ -216,7 +216,7 @@ export function Crossword({ data }: CrosswordProps) {
   useEffect(() => {
     const { isComplete: complete, isCorrect: correct } = checkPuzzleCompletion(
       userGrid,
-      grid
+      grid,
     );
     setIsComplete(complete);
     setIsCorrect(correct);
@@ -243,7 +243,7 @@ export function Crossword({ data }: CrosswordProps) {
       clueMap,
       selectedCell.row,
       selectedCell.col,
-      direction
+      direction,
     );
   };
 
@@ -277,7 +277,7 @@ export function Crossword({ data }: CrosswordProps) {
       // Go to the last letter of the previous word
       const allClues = getCluesByDirection(direction);
       const currentIndex = allClues.findIndex(
-        (c) => c.number === currentClue.number
+        (c) => c.number === currentClue.number,
       );
       const prevIndex = (currentIndex - 1 + allClues.length) % allClues.length;
       const prevClue = allClues[prevIndex];
@@ -322,7 +322,7 @@ export function Crossword({ data }: CrosswordProps) {
 
     const allClues = getCluesByDirection(direction);
     const currentIndex = allClues.findIndex(
-      (c) => c.number === currentClue.number
+      (c) => c.number === currentClue.number,
     );
 
     const increment = dir === "next" ? 1 : -1;
@@ -335,7 +335,7 @@ export function Crossword({ data }: CrosswordProps) {
       const targetClue = allClues[targetIndex];
       const cells = getWordCells(targetClue, direction);
       const firstEmptyCell = cells.find(
-        (cell) => !userGrid[cell.row][cell.col]
+        (cell) => !userGrid[cell.row][cell.col],
       );
 
       if (firstEmptyCell) {
@@ -359,7 +359,7 @@ export function Crossword({ data }: CrosswordProps) {
       // About to pause - save the current elapsed time
       const currentTime = Date.now();
       const sessionTime = Math.floor(
-        (currentTime - lastResumeTimeRef.current) / 1000
+        (currentTime - lastResumeTimeRef.current) / 1000,
       );
       pausedTimeRef.current += sessionTime;
       setElapsedTime(pausedTimeRef.current);
@@ -385,9 +385,8 @@ export function Crossword({ data }: CrosswordProps) {
         setDirection("across");
       } else if (hasDown && !hasAcross) {
         setDirection("down");
-      } else if (hasAcross) {
-        setDirection("across");
       }
+      // If both clues exist, keep the current direction
     }
 
     setTimeout(() => {
@@ -421,7 +420,31 @@ export function Crossword({ data }: CrosswordProps) {
           }
 
           if (nextCol >= currentClue.startCol + currentClue.length) {
-            navigateToClue("next");
+            // Check if this is the last clue in current direction
+            const allClues = getCluesByDirection(direction);
+            const currentIndex = allClues.findIndex(
+              (c) => c.number === currentClue.number,
+            );
+            if (currentIndex === allClues.length - 1) {
+              // Last clue in this direction, switch to other direction
+              const newDirection = direction === "across" ? "down" : "across";
+              setDirection(newDirection);
+              const otherDirectionClues = getCluesByDirection(newDirection);
+              if (otherDirectionClues.length > 0) {
+                const firstClue = otherDirectionClues[0];
+                const cells = getWordCells(firstClue, newDirection);
+                const firstEmptyCell = cells.find(
+                  (cell) => !newGrid[cell.row][cell.col],
+                );
+                if (firstEmptyCell) {
+                  selectAndFocusCell(firstEmptyCell.row, firstEmptyCell.col);
+                } else {
+                  selectAndFocusCell(firstClue.startRow, firstClue.startCol);
+                }
+              }
+            } else {
+              navigateToClue("next");
+            }
             return;
           }
         } else {
@@ -435,7 +458,31 @@ export function Crossword({ data }: CrosswordProps) {
           }
 
           if (nextRow >= currentClue.startRow + currentClue.length) {
-            navigateToClue("next");
+            // Check if this is the last clue in current direction
+            const allClues = getCluesByDirection(direction);
+            const currentIndex = allClues.findIndex(
+              (c) => c.number === currentClue.number,
+            );
+            if (currentIndex === allClues.length - 1) {
+              // Last clue in this direction, switch to other direction
+              const newDirection = direction === "across" ? "down" : "across";
+              setDirection(newDirection);
+              const otherDirectionClues = getCluesByDirection(newDirection);
+              if (otherDirectionClues.length > 0) {
+                const firstClue = otherDirectionClues[0];
+                const cells = getWordCells(firstClue, newDirection);
+                const firstEmptyCell = cells.find(
+                  (cell) => !newGrid[cell.row][cell.col],
+                );
+                if (firstEmptyCell) {
+                  selectAndFocusCell(firstEmptyCell.row, firstEmptyCell.col);
+                } else {
+                  selectAndFocusCell(firstClue.startRow, firstClue.startCol);
+                }
+              }
+            } else {
+              navigateToClue("next");
+            }
             return;
           }
         }
