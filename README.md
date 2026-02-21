@@ -11,6 +11,9 @@ A responsive, interactive crossword puzzle web application built with React Rout
 - ✅ **Auto-Validation** - Checks answers when puzzle is complete
 - 🎯 **Smart Navigation** - Keyboard shortcuts and intelligent cell navigation
 - 📱 **Responsive Design** - Optimized for both mobile and desktop
+- 📤 **Puzzle Upload** - Upload puzzles in JSON or .puz format via web interface
+- 🎯 **Circled Squares** - Automatically displays circled squares from .puz files
+- 📄 **PDF Generation** - Generate printable PDFs of puzzles
 
 ### User Experience
 
@@ -20,6 +23,15 @@ A responsive, interactive crossword puzzle web application built with React Rout
 - **Cell Highlighting**: Visual feedback for selected cell and current word
 - **Success View**: Clean grid display after puzzle completion
 - **Dismissible Messages**: Press Escape or click × to close messages
+
+### Puzzle Format Support
+
+- **.puz Files** - Full support for Across Lite .puz format (https://code.google.com/archive/p/puz/wikis/FileFormat.wiki) including:
+  - Automatic parsing of grid and clues
+  - GEXT section parsing for circled squares
+  - HTML entity and tag cleaning in clues
+  - Solutions and puzzle state
+- **JSON Format** - Custom JSON format for maximum flexibility
 
 ## Getting Started
 
@@ -110,11 +122,28 @@ Example puzzle structure:
       "1. Down clue",
       "2. Another down clue"
     ]
-  }
+  },
+  "circles": [".", ".", "O", ".", ...]
 }
 ```
 
-### Adding Daily Puzzles
+**Optional fields:**
+
+- `circles` - Array of "." (normal) or "O" (circled) for each grid cell, used to highlight special theme squares
+
+### Adding Puzzles via Web Interface
+
+Navigate to `/upload` in your deployed application to upload puzzles through a web form:
+
+1. Select the puzzle date
+2. Choose a file:
+   - **.puz file** - Automatically parsed and converted to JSON
+   - **.json file** - Must match the format above
+3. Click "Upload Puzzle"
+
+The app validates the puzzle structure and uploads it to S3 with the correct filename.
+
+### Adding Puzzles via AWS CLI
 
 After deployment, find your bucket name:
 
@@ -147,13 +176,17 @@ The application will:
 │   │   ├── ClueLine.tsx           # Current clue display
 │   │   └── MobileKeyboard.tsx     # On-screen keyboard
 │   ├── routes/
-│   │   └── home.tsx        # Main route with S3 loader
+│   │   ├── home.tsx        # Main route with S3 loader
+│   │   ├── upload.tsx      # Puzzle upload interface
+│   │   └── pdf.tsx         # PDF generation
 │   ├── styles/
-│   │   └── crossword.css   # All crossword styling
+│   │   ├── crossword.css   # All crossword styling
+│   │   └── upload.css      # Upload page styling
 │   ├── types/
 │   │   └── crossword.ts    # TypeScript interfaces
 │   └── utils/
-│       └── crosswordHelpers.ts  # Helper functions
+│       ├── crosswordHelpers.ts  # Helper functions
+│       └── puzParser.ts         # .puz file parser
 ├── data/
 │   └── default.json        # Fallback puzzle
 ├── sst.config.ts          # Infrastructure configuration
@@ -190,6 +223,12 @@ The `sst.config.ts` file defines:
 
 ## Development Tips
 
+### Application Routes
+
+- `/` - Main crossword interface with daily puzzle
+- `/upload` - Upload puzzles in .puz or JSON format (requires authentication in production)
+- `/pdf` - Generate printable PDF of the latest puzzle
+
 ### Adding New Features
 
 The main component logic is in [`app/components/Crossword.tsx`](app/components/Crossword.tsx). It manages:
@@ -198,6 +237,16 @@ The main component logic is in [`app/components/Crossword.tsx`](app/components/C
 - Cell selection and navigation
 - Timer and pause functionality
 - Puzzle validation and completion
+
+### Puzzle File Format
+
+The [`app/utils/puzParser.ts`](app/utils/puzParser.ts) handles parsing of Across Lite .puz files, including:
+
+- Grid and solution parsing
+- Clue extraction and numbering
+- GEXT section for circled squares (0x80 bit)
+- HTML entity decoding in clues
+- Format validation
 
 ### Styling
 

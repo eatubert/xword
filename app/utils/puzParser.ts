@@ -17,6 +17,7 @@ interface PuzzleData {
   grid: string[];
   copyright?: string;
   notes?: string;
+  circles?: string[];
 }
 
 /**
@@ -187,6 +188,54 @@ function cleanHtmlFromClue(text: string): string {
 }
 
 /**
+ * Finds and parses extra sections like GEXT, GRBS, RTBL, etc.
+ * Returns the parsed sections as an object
+ */
+function parseExtraSections(
+  buffer: Uint8Array,
+  startOffset: number,
+): Map<string, Uint8Array> {
+  const sections = new Map<string, Uint8Array>();
+  let offset = startOffset;
+
+  // Check if we have room for at least one section header
+  while (offset + 8 <= buffer.length) {
+    // Read section name (4 bytes)
+    const sectionName = String.fromCharCode(
+      buffer[offset],
+      buffer[offset + 1],
+      buffer[offset + 2],
+      buffer[offset + 3],
+    );
+
+    // Check if this looks like a valid section name (uppercase letters)
+    if (!/^[A-Z]{4}$/.test(sectionName)) {
+      break;
+    }
+
+    // Read length (2 bytes, little-endian)
+    const length = readShort(buffer, offset + 4);
+
+    // Skip checksum (2 bytes)
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+
+    // Make sure we have enough data
+    if (dataEnd > buffer.length) {
+      break;
+    }
+
+    // Extract the data (not including the null terminator)
+    sections.set(sectionName, buffer.slice(dataStart, dataEnd));
+
+    // Move to next section (data + null terminator)
+    offset = dataEnd + 1;
+  }
+
+  return sections;
+}
+
+/**
  * Parse a .puz file and convert it to the JSON format expected by the app
  */
 export async function parsePuzFile(file: File): Promise<PuzzleData> {
@@ -251,9 +300,27 @@ export async function parsePuzFile(file: File): Promise<PuzzleData> {
 
   // Read notes (optional)
   let notes = "";
+  let notesEndOffset = offset;
   if (offset < buffer.length) {
-    const { value: notesValue } = readNullTerminatedString(buffer, offset);
+    const { value: notesValue, nextOffset } = readNullTerminatedString(
+      buffer,
+      offset,
+    );
     notes = notesValue;
+    notesEndOffset = nextOffset;
+  }
+
+  // Parse extra sections (GEXT, GRBS, RTBL, LTIM, etc.)
+  const extraSections = parseExtraSections(buffer, notesEndOffset);
+
+  // Process GEXT section for circled squares
+  let circles: string[] | undefined;
+  const gextData = extraSections.get("GEXT");
+  if (gextData && gextData.length === gridSize) {
+    circles = Array.from(gextData).map((byte) => {
+      // 0x80 bit indicates a circled square
+      return byte & 0x80 ? "O" : ".";
+    });
   }
 
   // Assign clue numbers based on grid structure
@@ -312,6 +379,10 @@ export async function parsePuzFile(file: File): Promise<PuzzleData> {
 
   if (notes) {
     result.notes = notes;
+  }
+
+  if (circles) {
+    result.circles = circles;
   }
 
   return result;

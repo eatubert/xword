@@ -11,6 +11,7 @@ export interface CrosswordData {
     down: string[];
   };
   grid: string[];
+  circles?: string[];
 }
 
 export interface ClueInfo {

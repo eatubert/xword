@@ -9,6 +9,7 @@ interface CrosswordGridProps {
   inputRefs: RefObject<(HTMLInputElement | null)[][]>;
   isCorrect: boolean;
   isTimerRunning: boolean;
+  circles?: string[];
   onCellClick: (row: number, col: number) => void;
   onInputChange: (row: number, col: number, value: string) => void;
   onKeyDown: (e: React.KeyboardEvent, row: number, col: number) => void;
@@ -23,6 +24,7 @@ export function CrosswordGrid({
   inputRefs,
   isCorrect,
   isTimerRunning,
+  circles,
   onCellClick,
   onInputChange,
   onKeyDown,
@@ -44,16 +46,18 @@ export function CrosswordGrid({
             const isSelected =
               selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
             const isInWord = wordCells.some(
-              (c) => c.row === rowIndex && c.col === colIndex
+              (c) => c.row === rowIndex && c.col === colIndex,
             );
             const cellNumber = numberGrid[rowIndex]?.[colIndex];
+            const cellIndex = rowIndex * size.cols + colIndex;
+            const hasCircle = circles && circles[cellIndex] === "O";
 
             return (
               <div
                 key={`${rowIndex}-${colIndex}`}
                 className={`crossword-cell ${isBlocked ? "blocked" : ""} ${
                   isSelected ? "selected" : ""
-                } ${isInWord ? "in-word" : ""}`}
+                } ${isInWord ? "in-word" : ""} ${hasCircle ? "circled" : ""}`}
                 onClick={() => onCellClick(rowIndex, colIndex)}
               >
                 {!isBlocked && (
@@ -83,7 +87,7 @@ export function CrosswordGrid({
                 )}
               </div>
             );
-          })
+          }),
         )}
       </div>
     </div>

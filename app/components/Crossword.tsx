@@ -624,6 +624,7 @@ export function Crossword({ data }: CrosswordProps) {
           inputRefs={inputRefs}
           isCorrect={isCorrect}
           isTimerRunning={isTimerRunning}
+          circles={data.circles}
           onCellClick={handleCellClick}
           onInputChange={handleInputChange}
           onKeyDown={handleKeyDown}
