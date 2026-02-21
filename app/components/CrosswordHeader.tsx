@@ -5,6 +5,7 @@ interface CrosswordHeaderProps {
   isPaused: boolean;
   isCorrect: boolean;
   onTogglePause: () => void;
+  onCheck: () => void;
 }
 
 export function CrosswordHeader({
@@ -14,6 +15,7 @@ export function CrosswordHeader({
   isPaused,
   isCorrect,
   onTogglePause,
+  onCheck,
 }: CrosswordHeaderProps) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -30,9 +32,18 @@ export function CrosswordHeader({
       <div className="timer-container">
         <span className="timer">{formatTime(elapsedTime)}</span>
         {!isCorrect && (
-          <button className="pause-button" onClick={onTogglePause}>
-            {isPaused ? "▶" : "⏸"}
-          </button>
+          <>
+            <button className="pause-button" onClick={onTogglePause}>
+              {isPaused ? "▶" : "⏸"}
+            </button>
+            <button
+              className="check-button"
+              onClick={onCheck}
+              title="Check answers"
+            >
+              ✓
+            </button>
+          </>
         )}
       </div>
     </div>

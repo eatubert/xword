@@ -54,6 +54,7 @@ export function Crossword({ data }: CrosswordProps) {
   const [numberGrid, setNumberGrid] = useState<(number | null)[][]>([]);
   const [isComplete, setIsComplete] = useState(false);
   const [isCorrect, setIsCorrect] = useState(false);
+  const [incorrectCells, setIncorrectCells] = useState<Set<string>>(new Set());
   const [showErrorMessage, setShowErrorMessage] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(() => {
@@ -370,6 +371,29 @@ export function Crossword({ data }: CrosswordProps) {
     setIsPaused(!isPaused);
   };
 
+  const handleCheck = () => {
+    const newIncorrectCells = new Set<string>();
+
+    for (let row = 0; row < userGrid.length; row++) {
+      for (let col = 0; col < userGrid[row].length; col++) {
+        const userCell = userGrid[row][col].toUpperCase().trim();
+        const correctCell = grid[row][col];
+
+        // Skip empty cells and black cells
+        if (correctCell === "." || userCell === "") {
+          continue;
+        }
+
+        // Check if the cell is incorrect
+        if (userCell !== correctCell) {
+          newIncorrectCells.add(`${row},${col}`);
+        }
+      }
+    }
+
+    setIncorrectCells(newIncorrectCells);
+  };
+
   const handleCellClick = (row: number, col: number) => {
     if (grid[row][col] === "." || isPaused) return;
 
@@ -580,6 +604,7 @@ export function Crossword({ data }: CrosswordProps) {
         isPaused={isPaused}
         isCorrect={isCorrect}
         onTogglePause={togglePause}
+        onCheck={handleCheck}
       />
 
       {isPaused && (
@@ -625,6 +650,7 @@ export function Crossword({ data }: CrosswordProps) {
           isCorrect={isCorrect}
           isTimerRunning={isTimerRunning}
           circles={data.circles}
+          incorrectCells={incorrectCells}
           onCellClick={handleCellClick}
           onInputChange={handleInputChange}
           onKeyDown={handleKeyDown}
